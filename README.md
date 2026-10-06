@@ -66,11 +66,13 @@ docker ps   # should list "ai_search_db" and "ai_search_cache"
 ---
 
 ## 📥 Seed the Database (one‑time only)
-`generate_dataset.py` creates 100 realistic product rows **and** computes their 384‑dim embeddings.
+`setup_db.py` enables the `pgvector` extension, creates the `products` table, and loads the 100 products (with their precomputed 384‑dim embeddings) from `products_precalculated.csv`.
 ```bash
-python generate_dataset.py
+python setup_db.py
 ```
-You should see a short log confirming insertion of 100 rows.
+You should see `✅ Loaded 100 rows from products_precalculated.csv. products table now has 100 rows.` It is safe to re-run — existing rows are left untouched.
+
+> **Optional:** `products_precalculated.csv` is already included. To regenerate it (e.g. after editing the product list), run `python generate_dataset.py` and then `python setup_db.py` again. Note that re-running `setup_db.py` does not overwrite rows that already exist; drop the table first if you want the regenerated values loaded.
 
 ---
 
@@ -169,7 +171,7 @@ On the very first run, `SentenceTransformer('all-MiniLM-L6-v2')` downloads the m
 **Q: I see a "HuggingFace Hub unauthenticated request" warning — is that a problem?**  
 No. It is just a warning, not an error. The model downloads and runs fine without an API token. You can safely ignore it.
 
-**Q: Do I need to run `python generate_dataset.py` every time I demo?**  
+**Q: Do I need to run `python setup_db.py` every time I demo?**  
 No — only once. The data and vectors are stored inside the PostgreSQL Docker volume. As long as you don't run `docker compose down -v` or `docker volume prune`, the data persists across sessions. Simply `docker compose up -d` the next time and you are ready.
 
 **Q: The server says "404 Not Found" when I open `http://127.0.0.1:8000` in the browser — is something broken?**  
@@ -300,11 +302,11 @@ In `app.py`, inside the function `extract_query_constraints()` (lines 22–99). 
 
 **Q: Where are the vectors generated?**  
 In two places:
-1. `generate_dataset.py` — generates vectors for the initial 100 products in bulk and inserts them into PostgreSQL.
+1. `generate_dataset.py` — generates vectors for the initial 100 products in bulk and saves them to `products_precalculated.csv`, which `setup_db.py` then loads into PostgreSQL.
 2. `app.py` (`add_product` endpoint) — generates a vector for each newly added product in real time.
 
 **Q: What is `products_precalculated.csv` for?**  
-It is a by-product of `generate_dataset.py`. The file contains the 100 products with their pre-computed vector columns saved as JSON strings. It is **not used by the app** — it exists purely for student inspection (e.g. opening in Excel or Pandas to see what a raw embedding looks like).
+It is the output of `generate_dataset.py`: the 100 products with their pre-computed vector columns saved as JSON strings. `setup_db.py` loads it into the `products` table, so you don't need to download the embedding model just to seed the database. You can also open it in Excel or Pandas to see what a raw embedding looks like.
 
 ---
 
